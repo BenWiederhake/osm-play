@@ -27,3 +27,13 @@ const osmium::object_id_type EXPORT_RELATIONS[] = {
     74942, // AT Vorarlberg
     109166, // AT Wien
 };
+
+static bool is_relevant_relation(osmium::object_id_type relation_id) {
+    // TODO: Linear scan with 27 items … dunno if that's efficient or not.
+    for (auto interesting_relation : EXPORT_RELATIONS) {
+        if (interesting_relation == relation_id) {
+            return true;
+        }
+    }
+    return false;
+}

@@ -13,20 +13,14 @@
 static const char* const INPUT_FILENAME = "/scratch/osm/detmold.osm.pbf";
 static const char* const OUTPUT_FILENAME = "/scratch/osm/relevant_detmold.osm.pbf";
 
-// Takes about 39 minutes.
+// Takes about 40 minutes.
 // static const char* const INPUT_FILENAME = "/scratch/osm/planet-231002.osm.pbf";
 // static const char* const OUTPUT_FILENAME = "/scratch/osm/relevant_planet-231002.osm.pbf";
 
-class ExtractRelevantManager : public osmium::relations::RelationsManager<ExtractRelevantManager, true, true, true> {
+class ExtractRelevantManager : public osmium::relations::RelationsManager<ExtractRelevantManager, false, true, true> {
 public:
     bool new_relation(const osmium::Relation& relation) noexcept {
-        // TODO: Linear scan with 27 items … dunno if that's efficient or not.
-        for (auto interesting_relation : EXPORT_RELATIONS) {
-            if (interesting_relation == relation.id()) {
-                return true;
-            }
-        }
-        return false;
+        return is_relevant_relation(relation.id());
     }
 
     void complete_relation(const osmium::Relation& relation) {
@@ -34,15 +28,25 @@ public:
     }
 
     void maybe_complete_relation(const osmium::Relation& relation) {
-        this->buffer().add_item(relation);
         for (const auto& member : relation.members()) {
-            if (member.ref() != 0) {
-                const auto obj_ptr = this->member_database(member.type()).get_object(member.ref());
-                if (obj_ptr != nullptr) {
-                    this->buffer().add_item(*obj_ptr);
-                }
+            if (member.ref() == 0 || member.type() != osmium::item_type::way) {
+                continue;
             }
+            const auto* obj_ptr = way_db.get_object(member.ref());
+            if (obj_ptr == nullptr) {
+                printf("missing way %ld?!\n", member.ref());
+                continue;
+            }
+            const auto* way_ptr = static_cast<const osmium::Way*>(obj_ptr);
+            //for (auto& node_ref : way.nodes()) {
+            //    if (!node_ref.location().valid()) {
+            //        printf("Node %ld in way %ld has invalid location?!\n", node_ref.ref(), way.id());
+            //        continue;
+            //    }
+            //}
+            this->buffer().add_item(*obj_ptr);
         }
+        this->buffer().add_item(relation);
         printf("Wrote relation %ld\n", relation.id());
         this->buffer().commit();
     }
