@@ -6,7 +6,6 @@
 #include <osmium/io/reader_with_progress_bar.hpp>
 #include <osmium/handler.hpp>
 #include <osmium/visitor.hpp>
-//#include <osmium/geom/mercator_projection.hpp>
 #include <osmium/relations/relations_manager.hpp>
 
 #include "relation_list.hpp"
@@ -40,7 +39,7 @@ public:
             if (member.ref() != 0) {
                 const auto obj_ptr = this->member_database(member.type()).get_object(member.ref());
                 if (obj_ptr != nullptr) {
-                    //this->buffer().add_item(*obj_ptr);
+                    this->buffer().add_item(*obj_ptr);
                 }
             }
         }
