@@ -1,5 +1,6 @@
 const osmium::object_id_type EXPORT_RELATIONS[] = {
     62781, // D Gesamt
+    16239, // AT Gesamt
     62611, // D BaWü
     2145268, // D Bay
     62422, // D Berlin
@@ -16,7 +17,6 @@ const osmium::object_id_type EXPORT_RELATIONS[] = {
     62607, // D SachsAnhalt
     62775, // D Schles Hol
     62366, // D Thür
-    16239, // AT Gesamt
     76909, // AT Burgenland
     52345, // AT Kärnten
     77189, // AT Niederöster
