@@ -1,0 +1,3 @@
+exit 42
+
+osmium getid -r -t europe-latest.osm.pbf -i relevant_relation_ids.lst -o relevant_europe-latest.osm.pbf
