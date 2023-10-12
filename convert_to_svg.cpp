@@ -9,8 +9,8 @@
 
 #include "relation_list.hpp"
 
-static const char* const INPUT_FILENAME = "/scratch/osm/detmold.osm.pbf";
-// static const char* const INPUT_FILENAME = "/scratch/osm/relevant_planet-231002.osm.pbf";
+static const char* const INPUT_FILENAME = "/scratch/osm/detmold_wwl.osm.pbf";
+// static const char* const INPUT_FILENAME = "/scratch/osm/relevant_planet-231002_wwl.osm.pbf";
 
 static const char* const OUTPUT_FILENAME = "/scratch/osm/laendergrenzen.svg";
 static const double MIN_LONG_DEG = 0.0;
