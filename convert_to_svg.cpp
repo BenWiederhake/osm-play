@@ -130,7 +130,7 @@ public:
         // Note: iostream supports RAII, but it seems a better idea to use fprintf than streaming I/O.
         m_file = fopen(output_filename, "w");
         assert(m_file);
-        fprintf(m_file, "<svg width=\"%f\" height=\"%f\">\n", WIDTH, HEIGHT);
+        fprintf(m_file, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%f\" height=\"%f\">\n", WIDTH, HEIGHT);
         fprintf(m_file, " <rect width=\"%f\" height=\"%f\" style=\"fill:rgb(255,255,255)\"/>\n", WIDTH, HEIGHT);
     }
     SvgWriter(const SvgWriter&) = delete;
