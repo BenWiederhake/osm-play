@@ -1,8 +1,10 @@
 const osmium::object_id_type EXPORT_RELATIONS[] = {
-    62781, // D Gesamt
-    16239, // AT Gesamt
     62611, // D BaWü
     2145268, // D Bay
+
+    62781, // D Gesamt
+    16239, // AT Gesamt
+
     62422, // D Berlin
     62504, // D Brande
     62718, // D Bremen, Achtung Bremerhaven?
@@ -27,10 +29,22 @@ const osmium::object_id_type EXPORT_RELATIONS[] = {
     74942, // AT Vorarlberg
     109166, // AT Wien
 };
+const osmium::object_id_type THICK_STROKE[] = {
+    62781, // D Gesamt
+    16239, // AT Gesamt
+};
 
 static bool is_relevant_relation(osmium::object_id_type relation_id) {
     // TODO: Linear scan with 27 items … dunno if that's efficient or not.
     for (auto interesting_relation : EXPORT_RELATIONS) {
+        if (interesting_relation == relation_id) {
+            return true;
+        }
+    }
+    return false;
+}
+static bool is_thick_stroke_relation(osmium::object_id_type relation_id) {
+    for (auto interesting_relation : THICK_STROKE) {
         if (interesting_relation == relation_id) {
             return true;
         }

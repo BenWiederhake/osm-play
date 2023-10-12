@@ -131,7 +131,7 @@ public:
         m_file = fopen(output_filename, "w");
         assert(m_file);
         fprintf(m_file, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%f\" height=\"%f\">\n", WIDTH, HEIGHT);
-        fprintf(m_file, " <rect width=\"%f\" height=\"%f\" style=\"fill:rgb(255,255,255)\"/>\n", WIDTH, HEIGHT);
+        fprintf(m_file, " <rect width=\"%f\" height=\"%f\" style=\"fill:rgb(245,245,245)\"/>\n", WIDTH, HEIGHT);
     }
     SvgWriter(const SvgWriter&) = delete;
     SvgWriter(SvgWriter&&) = delete;
@@ -228,10 +228,16 @@ public:
             fprintf(m_file, "w%lu+%lumore,", ring.front(), ring.size() - 1);
         }
         fprintf(m_file, "\"");
-        fprintf(m_file, " stroke=\"white\"");
-        fprintf(m_file, " stroke-width=\"1\"");
-        fprintf(m_file, " fill-rule=\"evenodd\"");
-        fprintf(m_file, " fill=\"rgb(%d,%d,%d)\"", rand() % 256, rand() % 256, rand() % 256);
+        fprintf(m_file, " stroke=\"rgb(245,245,245)\"");
+        if (is_thick_stroke_relation(relation_id)) {
+            fprintf(m_file, " stroke-width=\"5\"");
+            fprintf(m_file, " fill=\"none\"");
+        } else {
+            fprintf(m_file, " stroke-width=\"1\"");
+            fprintf(m_file, " fill-rule=\"evenodd\"");
+            //fprintf(m_file, " fill=\"rgb(%d,%d,%d)\"", rand() % 256, rand() % 256, rand() % 256);
+            fprintf(m_file, " fill=\"rgb(159,159,159)\"");
+        }
         fprintf(m_file, " d=\"");
         for (auto const& ring : rings) {
             fprintf(m_file, "M");
