@@ -145,6 +145,111 @@ public:
         m_file = nullptr;
     }
 
+    void write_rings(std::vector<std::vector<osmium::Location>> const& rings, osmium::object_id_type relation_id, osmium::object_id_type some_way_id) {
+        if (VERBOSE_SVG) {
+            fprintf(m_file, " <path id=\"relation_%ld_with_%lu_rings\"", relation_id, rings.size());
+            fprintf(m_file, " comment=\"w%lu...\"", some_way_id);
+        } else {
+            fprintf(m_file, " <path");
+        }
+        fprintf(m_file, " stroke=\"rgb(245,245,245)\"");
+        if (is_thick_stroke_relation(relation_id)) {
+            fprintf(m_file, " stroke-width=\"5\"");
+            fprintf(m_file, " fill=\"none\"");
+        } else {
+            fprintf(m_file, " stroke-width=\"1\"");
+            fprintf(m_file, " fill-rule=\"evenodd\"");
+            //fprintf(m_file, " fill=\"rgb(%d,%d,%d)\"", rand() % 256, rand() % 256, rand() % 256);
+            fprintf(m_file, " fill=\"rgb(159,159,159)\"");
+        }
+        fprintf(m_file, " d=\"");
+        for (auto const& ring : rings) {
+            for (auto location : ring) {
+                this->offer_location(location);
+            }
+            // The first and last locations *must* be written (to make extra-sure that loops are closed),
+            // but intermediate points may be skipped.
+            this->flush_location();
+        }
+        fputs("\"/>\n", m_file);
+    }
+
+    size_t skipped_painting() const {
+        return m_skipped_painting;
+    }
+
+    size_t painted() const {
+        return m_painted;
+    }
+
+private:
+    void offer_location(osmium::Location const& location) {
+        double x = (location.lon() - MIN_LONG_DEG) * PX_PER_LONG_DEG;
+        double y = (MAX_LAT_DEG - location.lat()) * PX_PER_LAT_DEG;
+
+        // Paint, unless the last painted point is close enough.
+        bool should_update = true;
+        if (m_last_painted_valid) {
+            double dx = x - m_last_painted_x;
+            double dy = y - m_last_painted_y;
+            double dist_sq = dx * dx + dy * dy;
+            should_update = dist_sq >= PX_PAINT_TRESHOLD_SQUARED;
+        }
+
+        if (should_update) {
+            paint_location_now(x, y);
+            m_buffered_x = x;
+            m_buffered_y = y;
+            m_buffer_needs_painting = false;
+        } else {
+            m_buffered_x = x;
+            m_buffered_y = y;
+            m_buffer_needs_painting = true;
+            m_skipped_painting += 1;
+        }
+    }
+
+    void flush_location() {
+        if (m_buffer_needs_painting) {
+            paint_location_now(m_buffered_x, m_buffered_y);
+            m_skipped_painting -= 1;
+        }
+        m_last_painted_valid = false;
+        m_buffer_needs_painting = false;
+    }
+
+    void paint_location_now(double x, double y) {
+        fprintf(m_file, "%s%.1f,%.1f", m_last_painted_valid ? "L" : "M", x, y);
+        m_last_painted_x = x;
+        m_last_painted_y = y;
+        m_last_painted_valid = true;
+        m_painted += 1;
+    }
+
+    FILE* m_file;
+    double m_last_painted_x;
+    double m_last_painted_y;
+    bool m_last_painted_valid {false};
+    double m_buffered_x;
+    double m_buffered_y;
+    bool m_buffer_needs_painting {false};
+    size_t m_skipped_painting {0};
+    size_t m_painted {0};
+};
+
+using Consumer = SvgWriter;
+
+class PolyFeeder {
+public:
+    explicit PolyFeeder(Consumer& consumer)
+        : m_consumer(consumer)
+    {
+    }
+    PolyFeeder(const PolyFeeder&) = delete;
+    PolyFeeder(PolyFeeder&&) = delete;
+    PolyFeeder& operator=(const PolyFeeder&) = delete;
+    PolyFeeder& operator=(PolyFeeder&&) = delete;
+
     void write_relations_from(ExtractRelevantHandler const& handler) {
         for (auto relation_id : EXPORT_RELATIONS) {
             this->write_relation_from(relation_id, handler);
@@ -222,111 +327,31 @@ public:
         this->write_rings_from(relation_id, rings, handler);
     }
 
-    void write_rings_from(osmium::object_id_type relation_id, std::vector<std::vector<osmium::object_id_type>> const& rings, ExtractRelevantHandler const& handler) {
-        if (VERBOSE_SVG) {
-            fprintf(m_file, " <path id=\"relation_%ld_with_%lu_rings\"", relation_id, rings.size());
-            fprintf(m_file, " comment=\"");
-            for (auto const& ring : rings) {
-                fprintf(m_file, "w%lu+%lumore,", ring.front(), ring.size() - 1);
-            }
-            fprintf(m_file, "\"");
-        } else {
-            fprintf(m_file, " <path");
-        }
-        fprintf(m_file, " stroke=\"rgb(245,245,245)\"");
-        if (is_thick_stroke_relation(relation_id)) {
-            fprintf(m_file, " stroke-width=\"5\"");
-            fprintf(m_file, " fill=\"none\"");
-        } else {
-            fprintf(m_file, " stroke-width=\"1\"");
-            fprintf(m_file, " fill-rule=\"evenodd\"");
-            //fprintf(m_file, " fill=\"rgb(%d,%d,%d)\"", rand() % 256, rand() % 256, rand() % 256);
-            fprintf(m_file, " fill=\"rgb(159,159,159)\"");
-        }
-        fprintf(m_file, " d=\"");
-        for (auto const& ring : rings) {
-            for (auto signed_way_id : ring) {
+    void write_rings_from(osmium::object_id_type relation_id, std::vector<std::vector<osmium::object_id_type>> const& rings_ways, ExtractRelevantHandler const& handler) {
+        std::vector<std::vector<osmium::Location>> rings_locs;
+        for (auto const& ring_ways : rings_ways) {
+            std::vector<osmium::Location> ring_locs;
+            for (auto signed_way_id : ring_ways) {
                 auto const& way_nodes = handler.way_to_nodes.at(abs_id(signed_way_id));
                 // Note: On consecutive ways, some nodes are duplicated.
                 // However, this is automatically thrown out by skipping nearby nodes.
                 if (signed_way_id < 0) {
                     for (auto& node_id : boost::adaptors::reverse(way_nodes)) {
-                        this->offer_location(handler.node_to_location.at(node_id));
+                        ring_locs.push_back(handler.node_to_location.at(node_id));
                     }
                 } else {
                     for (auto& node_id : way_nodes) {
-                        this->offer_location(handler.node_to_location.at(node_id));
+                        ring_locs.push_back(handler.node_to_location.at(node_id));
                     }
                 }
             }
-            // The first and last locations *must* be written (to make extra-sure that loops are closed),
-            // but intermediate points may be skipped.
-            this->flush_location();
+            rings_locs.push_back(ring_locs);
         }
-        fputs("\"/>\n", m_file);
-    }
-
-    size_t skipped_painting() const {
-        return m_skipped_painting;
-    }
-
-    size_t painted() const {
-        return m_painted;
+        m_consumer.write_rings(rings_locs, relation_id, rings_ways.front().front());
     }
 
 private:
-    void offer_location(osmium::Location const& location) {
-        double x = (location.lon() - MIN_LONG_DEG) * PX_PER_LONG_DEG;
-        double y = (MAX_LAT_DEG - location.lat()) * PX_PER_LAT_DEG;
-
-        // Paint, unless the last painted point is close enough.
-        bool should_update = true;
-        if (m_last_painted_valid) {
-            double dx = x - m_last_painted_x;
-            double dy = y - m_last_painted_y;
-            double dist_sq = dx * dx + dy * dy;
-            should_update = dist_sq >= PX_PAINT_TRESHOLD_SQUARED;
-        }
-
-        if (should_update) {
-            paint_location_now(x, y);
-            m_buffered_x = x;
-            m_buffered_y = y;
-            m_buffer_needs_painting = false;
-        } else {
-            m_buffered_x = x;
-            m_buffered_y = y;
-            m_buffer_needs_painting = true;
-            m_skipped_painting += 1;
-        }
-    }
-
-    void flush_location() {
-        if (m_buffer_needs_painting) {
-            paint_location_now(m_buffered_x, m_buffered_y);
-            m_skipped_painting -= 1;
-        }
-        m_last_painted_valid = false;
-        m_buffer_needs_painting = false;
-    }
-
-    void paint_location_now(double x, double y) {
-        fprintf(m_file, "%s%.1f,%.1f", m_last_painted_valid ? "L" : "M", x, y);
-        m_last_painted_x = x;
-        m_last_painted_y = y;
-        m_last_painted_valid = true;
-        m_painted += 1;
-    }
-
-    FILE* m_file;
-    double m_last_painted_x;
-    double m_last_painted_y;
-    bool m_last_painted_valid {false};
-    double m_buffered_x;
-    double m_buffered_y;
-    bool m_buffer_needs_painting {false};
-    size_t m_skipped_painting {0};
-    size_t m_painted {0};
+    Consumer& m_consumer;
 };
 
 int main() {
@@ -350,11 +375,12 @@ int main() {
     handler.check();
 
     printf("writing svg\n");
-    SvgWriter writer{OUTPUT_FILENAME};
+    Consumer consumer{OUTPUT_FILENAME};
+    PolyFeeder writer{consumer};
     writer.write_relations_from(handler);
-    printf("   painted %lu nodes\n", writer.painted());
-    printf("   could skip painting %lu nodes\n", writer.skipped_painting());
+    printf("   painted %lu nodes\n", consumer.painted());
+    printf("   could skip painting %lu nodes\n", consumer.skipped_painting());
 
     printf("closing\n");
-    return 0; // Implicit: Deconstruct manager, which finishes and closes the file.
+    return 0; // Implicit: Deconstruct consumer, which finishes and closes the file.
 }
