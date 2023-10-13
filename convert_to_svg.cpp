@@ -30,7 +30,8 @@ static const double MIN_LAT_DEG = 45.88919;
 static const double MAX_LAT_DEG = 55.67336;
 static const double PX_PER_LONG_DEG = 99.52777896870847;
 // 0.5 is reasonable. Set to -1.0 to disable (0.0 should probably also work).
-static const double PX_PAINT_TRESHOLD_SQUARED = 0.3;
+static const double PX_PAINT_TRESHOLD_SQUARED = 0.81;
+static const bool VERBOSE_SVG = false;
 
 // v3.y = sin(latitude);
 // v3.x = cos(latitude) * sin(longitude);
@@ -222,12 +223,16 @@ public:
     }
 
     void write_rings_from(osmium::object_id_type relation_id, std::vector<std::vector<osmium::object_id_type>> const& rings, ExtractRelevantHandler const& handler) {
-        fprintf(m_file, " <path id=\"relation_%ld_with_%lu_rings\"", relation_id, rings.size());
-        fprintf(m_file, " comment=\"");
-        for (auto const& ring : rings) {
-            fprintf(m_file, "w%lu+%lumore,", ring.front(), ring.size() - 1);
+        if (VERBOSE_SVG) {
+            fprintf(m_file, " <path id=\"relation_%ld_with_%lu_rings\"", relation_id, rings.size());
+            fprintf(m_file, " comment=\"");
+            for (auto const& ring : rings) {
+                fprintf(m_file, "w%lu+%lumore,", ring.front(), ring.size() - 1);
+            }
+            fprintf(m_file, "\"");
+        } else {
+            fprintf(m_file, " <path");
         }
-        fprintf(m_file, "\"");
         fprintf(m_file, " stroke=\"rgb(245,245,245)\"");
         if (is_thick_stroke_relation(relation_id)) {
             fprintf(m_file, " stroke-width=\"5\"");
@@ -240,7 +245,6 @@ public:
         }
         fprintf(m_file, " d=\"");
         for (auto const& ring : rings) {
-            fprintf(m_file, "M");
             for (auto signed_way_id : ring) {
                 auto const& way_nodes = handler.way_to_nodes.at(abs_id(signed_way_id));
                 // Note: On consecutive ways, some nodes are duplicated.
@@ -285,14 +289,10 @@ private:
         }
 
         if (should_update) {
-            fprintf(m_file, " %f,%f", x, y);
-            m_last_painted_x = x;
-            m_last_painted_y = y;
-            m_last_painted_valid = true;
+            paint_location_now(x, y);
             m_buffered_x = x;
             m_buffered_y = y;
             m_buffer_needs_painting = false;
-            m_painted += 1;
         } else {
             m_buffered_x = x;
             m_buffered_y = y;
@@ -303,12 +303,19 @@ private:
 
     void flush_location() {
         if (m_buffer_needs_painting) {
-            fprintf(m_file, " %f,%f", m_buffered_x, m_buffered_y);
-            m_painted += 1;
+            paint_location_now(m_buffered_x, m_buffered_y);
             m_skipped_painting -= 1;
         }
         m_last_painted_valid = false;
         m_buffer_needs_painting = false;
+    }
+
+    void paint_location_now(double x, double y) {
+        fprintf(m_file, "%s%.1f,%.1f", m_last_painted_valid ? "L" : "M", x, y);
+        m_last_painted_x = x;
+        m_last_painted_y = y;
+        m_last_painted_valid = true;
+        m_painted += 1;
     }
 
     FILE* m_file;
