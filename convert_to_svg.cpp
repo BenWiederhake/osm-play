@@ -18,7 +18,8 @@
 static const char* const INPUT_FILENAME = "/scratch/osm/relevant_europe-latest.osm.pbf";
 //static const char* const INPUT_FILENAME = "/scratch/osm/relevant_planet-231002.osm.pbf";
 
-static const char* const OUTPUT_FILENAME = "/scratch/osm/laendergrenzen.svg";
+//static const char* const OUTPUT_FILENAME = "/scratch/osm/laendergrenzen.svg";
+static const char* const OUTPUT_FILENAME = "/scratch/osm/laendergrenzen.geo.json";
 // Achieve compatibility with … a thing:
 // ORIGIN	45.88919, 4.96126
 // X0 Y130	55.67336, 4.96126
@@ -237,7 +238,78 @@ private:
     size_t m_painted {0};
 };
 
-using Consumer = SvgWriter;
+class GeoJsonWriter {
+public:
+    explicit GeoJsonWriter(const char* const output_filename)
+    {
+        // Note: iostream supports RAII, but it seems a better idea to use fprintf than streaming I/O.
+        m_file = fopen(output_filename, "w");
+        assert(m_file);
+        fprintf(m_file, "{\"type\": \"FeatureCollection\", \"features\": [\n");
+    }
+    GeoJsonWriter(const GeoJsonWriter&) = delete;
+    GeoJsonWriter(GeoJsonWriter&&) = delete;
+    GeoJsonWriter& operator=(const GeoJsonWriter&) = delete;
+    GeoJsonWriter& operator=(GeoJsonWriter&&) = delete;
+
+    ~GeoJsonWriter() {
+        fputs("]}\n", m_file);
+        fclose(m_file);
+        m_file = nullptr;
+    }
+
+    void write_rings(std::vector<std::vector<osmium::Location>> const& rings, osmium::object_id_type relation_id, osmium::object_id_type some_way_id) {
+        if (m_first_feature) {
+            m_first_feature = false;
+        } else {
+            fprintf(m_file, ",\n");
+        }
+        fprintf(m_file, "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[\n");
+        bool first_ring = true;
+        for (auto const& ring : rings) {
+            if (first_ring) {
+                first_ring = false;
+                fprintf(m_file, "  [");
+            } else {
+                fprintf(m_file, " ,[");
+            }
+            bool first_point_in_ring = true;
+            for (auto location : ring) {
+                if (first_point_in_ring) {
+                    first_point_in_ring = false;
+                } else {
+                    fprintf(m_file, ",");
+                }
+                // 180° = 20 000 km
+                // Let's round that to:
+                // 180° = 18 000 km
+                // → 1° = 100 km
+                // → 0.01° = 1 km
+                // → 0.00001° = 1 m
+                // So we definitely don't need more than 5 decimal digits.
+                fprintf(m_file, "[%.5f,%.5f]", location.lon(), location.lat());
+            }
+            fprintf(m_file, "]\n");
+            m_painted += ring.size();
+        }
+        fprintf(m_file, "]},\"properties\":{\"relation_id\":\"%ld\",\"some_way\":\"%ld\"}}\n", relation_id, some_way_id);
+    }
+
+    size_t skipped_painting() const {
+        return 0;
+    }
+
+    size_t painted() const {
+        return m_painted;
+    }
+
+private:
+    FILE* m_file;
+    size_t m_painted {0};
+    bool m_first_feature {true};
+};
+
+using Consumer = GeoJsonWriter;
 
 class PolyFeeder {
 public:
