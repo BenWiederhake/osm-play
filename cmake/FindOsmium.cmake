@@ -58,12 +58,12 @@
 # This is the list of directories where we look for osmium includes.
 set(_osmium_include_path
         ../libosmium
+        ../../libosmium
         ~/Library/Frameworks
         /Library/Frameworks
         /opt/local # DarwinPorts
         /opt
 )
-# /usr/include ???
 
 # Look for the header file.
 find_path(OSMIUM_INCLUDE_DIR osmium/version.hpp

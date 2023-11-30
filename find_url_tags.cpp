@@ -161,9 +161,14 @@ int main() {
 //    * contact:youtube (usernames)
 //    * disused:contact:facebook (usernames; probably offline anyway)
 //    * disused:website (probably offline anyway)
+//    * disused:contact:website
 //    * old_website (probably offline anyway)
 //    * removed:contact:facebook (usernames; probably offline anyway)
 //    * removed:contact:instagram (usernames; probably offline anyway)
+//    * removed:contact:twitter (usernames; probably offline anyway)
+//    * removed:contact:website (usernames; probably offline anyway)
+//    * removed:contact:youtube (usernames; probably offline anyway)
+//    * removed:website (probably offline anyway)
 //    * source_ref ("interpolation", "extrapolation", "sign", "video", … same with all source:* tags)
 //    * source:ref
 //    * source:access
@@ -176,6 +181,7 @@ int main() {
 //    * source:railway:ref
 //    * source:shop
 //    * video (The 5249 https-links are actually spam, and the 1641 "weird" contents are the meaningsful strings "yes" and "no".)
+//    * was:website (probably offline anyway)
 //   Note: We should lint these tags, especially wiki pages and tags with well-known "normal" values.
 
 // Remaining tags:
@@ -189,7 +195,6 @@ int main() {
 // - contact:webcam
 // - contact:website
 // - destination:url
-// - disused:contact:website
 // - facebook
 // - fee:source
 // - flickr
@@ -212,10 +217,6 @@ int main() {
 // - picture
 // - post_office:website
 // - railway:source
-// - removed:contact:twitter
-// - removed:contact:website
-// - removed:contact:youtube
-// - removed:website
 // - source_2
 // - source_url
 // - source:1
@@ -239,7 +240,6 @@ int main() {
 // - url:official
 // - url:timetable
 // - video_2
-// - was:website
 // - webcam
 // - website
 // - website_1
@@ -255,3 +255,9 @@ int main() {
 // - website2
 // - xmas:url
 // Some of these should probably not be in use, at all.
+
+// Don't check contact:atom and contact:rss, since I cannot easily check/fix those.
+
+// Re-include some tags:
+// rail_trail:website
+// source:url

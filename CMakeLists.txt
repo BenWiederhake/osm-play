@@ -21,3 +21,11 @@ target_compile_options(${PROG} PRIVATE -Wall -Wextra -pedantic -Wredundant-decls
 target_compile_options(${PROG} PRIVATE -O2 -g2)
 target_link_libraries(${PROG} ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
 set_pthread_on_target(${PROG})
+
+set(PROG analyze_counts)
+add_executable(${PROG} ${PROG}.cpp ${SOURCES})
+# FIXME: Why doesn't this work? --> target_compile_options(${PROG} PRIVATE ${OSMIUM_WARNING_OPTIONS})
+target_compile_options(${PROG} PRIVATE -Wall -Wextra -pedantic -Wredundant-decls -Wdisabled-optimization -Wctor-dtor-privacy -Wnon-virtual-dtor -Woverloaded-virtual -Wsign-promo -Wold-style-cast)
+target_compile_options(${PROG} PRIVATE -O2 -g2)
+target_link_libraries(${PROG} ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
+set_pthread_on_target(${PROG})

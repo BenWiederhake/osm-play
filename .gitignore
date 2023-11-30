@@ -1,1 +1,4 @@
 build/
+.venv/
+website_pages_running_josm/
+old_html.tar.lz4
