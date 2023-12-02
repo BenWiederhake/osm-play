@@ -6,8 +6,10 @@
 #include <osmium/handler.hpp>
 #include <osmium/visitor.hpp>
 
-static const char* const INPUT_FILENAME = "/scratch/osm/bochum_6.99890,51.38677,7.39913,51.58303_231002.osm.pbf";
+//static const char* const INPUT_FILENAME = "/scratch/osm/bochum_6.99890,51.38677,7.39913,51.58303_231002.osm.pbf";
 //static const char* const INPUT_FILENAME = "/scratch/osm/europe-latest.osm.pbf";
+static const char* const INPUT_FILENAME = "/scratch/osm/planet-231002.osm.pbf";
+
 
 static const size_t KEEP_LARGEST_ITEMS_NUM = 5000;
 static const char* const OUTPUT_FILENAME = "/scratch/osm/tag-count-histogram.csv";
@@ -43,7 +45,7 @@ public:
 class StatsHandler : public osmium::handler::Handler {
 public:
     void any_object(osmium::OSMObject const& obj) {
-        m_items.push_back(ItemSizeEntry{obj});
+        //m_items.push_back(ItemSizeEntry{obj});
         if (m_items.size() > 10 * KEEP_LARGEST_ITEMS_NUM) {
             prune();
         }
@@ -89,12 +91,12 @@ int main() {
     printf("  %lu nodes, %lu ways, %lu relations\n", stats_handler.m_nodes, stats_handler.m_ways, stats_handler.m_relations);
     size_t count_any = stats_handler.m_nodes + stats_handler.m_ways + stats_handler.m_relations;
     printf("Collected stats on the largest %lu items (%f %% of the database). Writing to %s …\n", stats_handler.m_items.size(), stats_handler.m_items.size() * 100.0 / count_any, OUTPUT_FILENAME);
-    FILE* fp = fopen(OUTPUT_FILENAME, "w");
-    assert(nullptr != fp);
-    for (auto const& entry : stats_handler.m_items) {
-        fprintf(fp, "%c%lu,%lu\n", osmium::item_type_to_char(entry.m_item_type), entry.m_id, entry.m_tag_data_size);
-    }
-    fclose(fp);
+    //FILE* fp = fopen(OUTPUT_FILENAME, "w");
+    //assert(nullptr != fp);
+    //for (auto const& entry : stats_handler.m_items) {
+    //    fprintf(fp, "%c%lu,%lu\n", osmium::item_type_to_char(entry.m_item_type), entry.m_id, entry.m_tag_data_size);
+    //}
+    //fclose(fp);
 
     printf("All done!\n");
     return 0;
