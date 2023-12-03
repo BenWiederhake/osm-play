@@ -55,17 +55,19 @@ private:
         for (auto buf_it = buffers.rbegin(); buf_it != buffers.rend(); ++buf_it) {
             const auto& buffer = *buf_it;
             for (auto it = buffer->begin<osmium::OSMObject>(); it != buffer->end<osmium::OSMObject>(); ++it) {
-                if (it->type() != osmium::item_type::node) {
+                if (it->type() != type) {
                     // TODO: Exploit order on object types?
                     continue;
                 }
                 if (it->id() > id) {
                     // Exploit the fact that early IDs come first, so we immediately know that we're behind where the needle would have been.
+                    printf("# UNRESOLVED LATE? %c%lu\n", osmium::item_type_to_char(type), id);
                     return osmium::Location();
                 }
                 if (it->id() == id) {
                     switch (type) {
                     case osmium::item_type::node:
+                        printf("# @ n%lu\n", it->id());
                         return static_cast<osmium::Node&>(*it).location();
                     case osmium::item_type::way:
                         return resolve(static_cast<osmium::Way&>(*it));
@@ -78,6 +80,7 @@ private:
                 }
             }
         }
+        printf("# UNRESOLVED NOFIND? %c%lu\n", osmium::item_type_to_char(type), id);
         return osmium::Location();
     }
 
@@ -88,6 +91,36 @@ int main() {
     printf("# Running on %s …\n", INPUT_FILENAME);
     osmium::io::PbfBlockIndexTable table {INPUT_FILENAME};
     printf("# File has %lu blocks.\n", table.block_starts().size());
+
+
+    // for (size_t i = 27792; i < 27794 + 1; ++i) {
+    //     auto reversed_buffers = table.get_parsed_block(i, osmium::io::read_meta::no);
+    //     auto lastbuf_firstobj = (*reversed_buffers.begin())->begin<osmium::OSMObject>();
+    //     auto firstbuf_firstobj = (*reversed_buffers.rbegin())->begin<osmium::OSMObject>();
+    //     printf(
+    //         "Page %lu has buffers %c%lu...??? until buffer %c%lu...???\n", i,
+    //         osmium::item_type_to_char(firstbuf_firstobj->type()), firstbuf_firstobj->id(),
+    //         osmium::item_type_to_char(lastbuf_firstobj->type()), lastbuf_firstobj->id()
+    //     );
+    // }
+    // {
+    //     printf("Now looking for w33665256...\n");
+    //     auto reversed_buffers = table.binary_search_object(osmium::item_type::way, 33665256, osmium::io::read_meta::no);
+    //     auto lastbuf_firstobj = (*reversed_buffers.begin())->begin<osmium::OSMObject>();
+    //     auto firstbuf_firstobj = (*reversed_buffers.rbegin())->begin<osmium::OSMObject>();
+    //     printf(
+    //         "Found page has buffers %c%lu...??? until buffer %c%lu...???\n",
+    //         osmium::item_type_to_char(firstbuf_firstobj->type()), firstbuf_firstobj->id(),
+    //         osmium::item_type_to_char(lastbuf_firstobj->type()), lastbuf_firstobj->id()
+    //     );
+    // }
+    // {
+    //     RareObjectLocator rare_object_locator {table};
+    //     rare_object_locator.hack();
+    // }
+    // exit(42);
+
+
     RareObjectLocator rare_object_locator {table};
     osmium::io::Reader reader{INPUT_FILENAME, osmium::osm_entity_bits::relation};
     osmium::apply(reader, rare_object_locator);
